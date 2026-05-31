@@ -30,7 +30,17 @@ const qualificationSchema = new Schema(
     gpa: {
       type: Number,
       min:  [0,   "GPA cannot be negative."],
-      max:  [4.0, "GPA cannot exceed 4.0."],
+      validate: {
+        validator: function(value){
+            return !this.gpaMax || value <= this.gpaMax;
+        },
+        message: "GPA cannot exceed the maximum scale value",
+      },
+    },
+    gpaMax: {
+      type: Number,
+      min: [1,"Maximum GPA scale must be atleast 1"],
+      default: 4.0,
     },
   },
   { _id: true } 
