@@ -1,0 +1,14 @@
+# Local Environment Variables
+backend/.env
+
+# Dependencies
+backend/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
