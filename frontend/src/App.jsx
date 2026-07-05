@@ -8,8 +8,7 @@ import Signup              from "./views/Signup.jsx";
 import ProfileWizard       from "./views/ProfileWizard.jsx";
 import JobBoard            from "./views/JobBoard.jsx";
 import AiInsightsPanel     from "./components/AiInsightsPanel.jsx";
-
-const Dashboard  = () => <PlaceholderPage title="Dashboard"    />;
+import Dashboard           from "./views/Dashboard.jsx";
 
 function PlaceholderPage({ title }) {
   return (

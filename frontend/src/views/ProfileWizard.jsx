@@ -50,9 +50,12 @@ function PersonalTab({ profile, onSaved }) {
     githubUrl:    profile?.githubUrl    ?? "",
     linkedinUrl:  profile?.linkedinUrl  ?? "",
     portfolioUrl: profile?.portfolioUrl ?? "",
+    resumeText:   profile?.resumeText   ?? "",
   });
   const [errors,  setErrors]  = useState({});
   const [status,  setStatus]  = useState("idle"); 
+  const [uploadStatus, setUploadStatus] = useState("idle"); // idle | uploading | success | error
+  const [uploadError,  setUploadError]  = useState("");
 
   useEffect(() => {
     if (!profile) return;
@@ -63,6 +66,7 @@ function PersonalTab({ profile, onSaved }) {
       githubUrl:    profile.githubUrl    ?? "",
       linkedinUrl:  profile.linkedinUrl  ?? "",
       portfolioUrl: profile.portfolioUrl ?? "",
+      resumeText:   profile.resumeText   ?? "",
     });
   }, [profile]);
 
@@ -106,6 +110,36 @@ function PersonalTab({ profile, onSaved }) {
     }
   }
 
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setUploadError("Only PDF files are supported.");
+      setUploadStatus("error");
+      return;
+    }
+
+    setUploadStatus("uploading");
+    setUploadError("");
+
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    try {
+      const { data } = await api.post("/profile/resume", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setUploadStatus("success");
+      onSaved?.(); // trigger reload to fetch new parsed resumeText
+      setTimeout(() => setUploadStatus("idle"), 2500);
+    } catch (err) {
+      const msg = err?.response?.data?.message ?? "Failed to upload and parse PDF.";
+      setUploadError(msg);
+      setUploadStatus("error");
+    }
+  }
+
   return (
     <form onSubmit={handleSave} noValidate className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -145,7 +179,61 @@ function PersonalTab({ profile, onSaved }) {
         <FieldError message={errors.portfolioUrl} />
       </div>
 
-      <div className="flex items-center justify-between pt-2">
+      {/* PDF Resume Uploader */}
+      <div className="space-y-2 border-t border-slate-700/60 pt-5">
+        <Label>Upload PDF Resume</Label>
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className={cx(
+            "btn-ghost text-xs px-4 py-2.5 cursor-pointer flex items-center gap-2",
+            uploadStatus === "uploading" && "opacity-60 cursor-not-allowed"
+          )}>
+            {uploadStatus === "uploading" ? (
+              <><Loader2 size={13} className="animate-spin" />Uploading & Parsing...</>
+            ) : uploadStatus === "success" ? (
+              <><Check size={13} className="text-green-400" />Uploaded</>
+            ) : (
+              "Choose PDF Resume"
+            )}
+            <input
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={uploadStatus === "uploading"}
+            />
+          </label>
+          <span className="text-xs text-slate-500">Maximum size 5MB. Automatically extracts text.</span>
+        </div>
+        {uploadStatus === "error" && uploadError && (
+          <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle size={11} />{uploadError}</p>
+        )}
+      </div>
+
+      {/* Copy-paste Resume Textarea */}
+      <div className="space-y-2">
+        <Label>Resume Text content</Label>
+        <textarea
+          className="input resize-none font-mono text-xs leading-relaxed"
+          rows={10}
+          value={form.resumeText}
+          onChange={set("resumeText")}
+          placeholder="Paste your plain-text resume here…
+
+Example:
+Jane Doe
+Senior Full-Stack Engineer
+Skills: React, Node.js, Express, MongoDB...
+
+Experience:
+- Software Engineer at Stripe (2022 - Present)
+  Built payments integrations and scaled APIs..."
+        />
+        <p className="text-xs text-slate-500">
+          Paste your resume text directly or upload a PDF above to auto-populate this box.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-slate-700/60">
         <SaveFeedback status={status} />
         <button type="submit" disabled={status === "saving"} className="btn-primary ml-auto">
           {status === "saving" ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}

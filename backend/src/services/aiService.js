@@ -1,40 +1,35 @@
-import OpenAI   from "openai";
+import { GoogleGenAI } from "@google/genai";
 import "dotenv/config";
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("⚠️   OPENAI_API_KEY is not set — AI analysis will return 503.");
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("⚠️   GEMINI_API_KEY is not set — AI analysis will return 503.");
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? "missing",
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY ?? "missing",
 });
 
-const AI_MODEL   = process.env.OPENAI_MODEL ?? "gpt-4o";
-const MAX_TOKENS = 1200;
-const TEMP       = 0.2;
+const AI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const MAX_TOKENS = 4000;
+const TEMP = 0.2;
 
 const SYSTEM_PROMPT = `You are an expert FAANG recruiter and ATS (Applicant Tracking System) specialist with 15+ years of experience evaluating technical candidates.
 
 Your task is to compare a candidate's resume against a job description and return a precise, actionable analysis.
 
-You MUST respond with ONLY a valid JSON object — no markdown, no commentary, no code fences — using EXACTLY this structure:
-{
-  "matchScore": <integer 0-100>,
-  "missingKeywords": [<string>, ...],
-  "dos": [<string>, ...],
-  "donts": [<string>, ...],
-  "tailoringSuggestions": "<string>"
-}
+You MUST respond with a valid JSON object matching the requested schema.
+
+CRITICAL JSON SAFETY RULES:
+1. Do NOT use double quotes (") inside any string value. If you need to quote text, use single quotes ('). For example, write: 'Change 'Developer' to 'Lead Developer'' instead of 'Change "Developer" to "Lead Developer"'.
+2. Do NOT use literal unescaped newlines inside string values. All suggestions and paragraphs must be on a single line.
+3. Be highly concise and brief. Keep suggestions short and actionable. Avoid long explanations.
 
 Field rules:
 - matchScore: Integer 0–100. Score against a realistic FAANG bar — calibrated, not generous. 70+ = strong match, 50–69 = partial, <50 = significant gaps.
-- missingKeywords: 3–8 high-impact technical or soft-skill keywords present in the JD but absent or underrepresented in the resume. Short strings only (e.g. "Kubernetes", "system design", "cross-functional leadership").
+- missingKeywords: 3–8 high-impact technical or soft-skill keywords present in the JD but absent or underrepresented in the resume. Short strings only (e.g. 'Kubernetes', 'system design').
 - dos: 3–5 concrete, specific action items the candidate should add, quantify, or highlight. Reference actual resume content where possible.
-- donts: 2–3 specific items to remove, de-emphasise, or reframe — irrelevant experience, filler phrases, or red flags for this particular role.
+- donts: 2–3 specific items to remove, de-emphasise, or reframe.
 - tailoringSuggestions: A multi-sentence paragraph with specific rewrite guidance for 1–2 existing bullet points. Quote the original phrasing, then show the improved version.`;
-
-const buildUserPrompt = (resumeText, jobDescription) =>
-  `## RESUME\n${resumeText.trim()}\n\n## JOB DESCRIPTION\n${jobDescription.trim()}`;
 
 export async function runAiAnalysis(resumeText, jobDescription) {
   if (!resumeText?.trim()) {
@@ -51,49 +46,77 @@ export async function runAiAnalysis(resumeText, jobDescription) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     throw new ServiceError(
-      "AI analysis is currently unavailable — OPENAI_API_KEY is not configured.",
+      "AI analysis is currently unavailable — GEMINI_API_KEY is not configured.",
       503
     );
   }
 
   const resumeTruncated = resumeText.slice(0, 6000);
-  const jdTruncated     = jobDescription.slice(0, 4000);
+  const jdTruncated = jobDescription.slice(0, 4000);
 
-  let rawContent;
-  try {
-    const completion = await openai.chat.completions.create({
-      model:           AI_MODEL,
-      temperature:     TEMP,
-      max_tokens:      MAX_TOKENS,
-      response_format: { type: "json_object" }, 
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: buildUserPrompt(resumeTruncated, jdTruncated) },
-      ],
-    });
-
-    rawContent = completion.choices[0]?.message?.content;
-
-    if (!rawContent) {
-      throw new ServiceError("OpenAI returned an empty response.", 502);
-    }
-  } catch (err) {
-    if (err instanceof ServiceError) throw err;
-    throw new ServiceError(
-      `OpenAI API error: ${err?.message ?? "Unknown error"}`,
-      err?.status ?? 502
-    );
-  }
+  const userPrompt = `## RESUME\n${resumeTruncated.trim()}\n\n## JOB DESCRIPTION\n${jdTruncated.trim()}`;
 
   let parsed;
   try {
+    const response = await ai.models.generateContent({
+      model: AI_MODEL,
+      contents: userPrompt,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        temperature: TEMP,
+        maxOutputTokens: MAX_TOKENS,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            matchScore: {
+              type: "INTEGER",
+              description: "Match score 0-100."
+            },
+            missingKeywords: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "3-8 keywords. Use single quotes for inner quotes if needed. No literal newlines."
+            },
+            dos: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "3-5 concrete action items. Use single quotes for inner quotes. No literal newlines."
+            },
+            donts: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "2-3 items to remove or reframe. Use single quotes for inner quotes. No literal newlines."
+            },
+            tailoringSuggestions: {
+              type: "STRING",
+              description: "Multi-sentence paragraph with specific rewrite guidance. Use single quotes for inner quotes. Do not include literal newlines."
+            }
+          },
+          required: ["matchScore", "missingKeywords", "dos", "donts", "tailoringSuggestions"]
+        }
+      }
+    });
+
+    let rawContent = response.text;
+    if (!rawContent || !rawContent.trim()) {
+      throw new ServiceError("Gemini returned an empty response.", 502);
+    }
+
+    // Safeguard: Strip markdown code fences if present
+    rawContent = rawContent.trim();
+    if (rawContent.startsWith("```")) {
+      rawContent = rawContent.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+    }
+
     parsed = JSON.parse(rawContent);
-  } catch {
+  } catch (err) {
+    if (err instanceof ServiceError) throw err;
     throw new ServiceError(
-      "OpenAI returned a response that could not be parsed as JSON.",
-      502
+      `Gemini API error: ${err?.message ?? "Unknown error"}`,
+      err?.status ?? 502
     );
   }
 
@@ -112,11 +135,11 @@ function validateAndNormalise(raw) {
 
   return {
     matchScore,
-    missingKeywords:      toStringArray(raw.missingKeywords),
-    dos:                  toStringArray(raw.dos),
-    donts:                toStringArray(raw.donts),
+    missingKeywords: toStringArray(raw.missingKeywords),
+    dos: toStringArray(raw.dos),
+    donts: toStringArray(raw.donts),
     tailoringSuggestions: String(raw.tailoringSuggestions ?? "").trim(),
-    analyzedAt:           new Date(),
+    analyzedAt: new Date(),
   };
 }
 
@@ -126,11 +149,10 @@ function toStringArray(value) {
   return [];
 }
 
-
 export class ServiceError extends Error {
   constructor(message, statusCode = 500) {
     super(message);
-    this.name       = "ServiceError";
+    this.name = "ServiceError";
     this.statusCode = statusCode;
   }
 }

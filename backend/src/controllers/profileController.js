@@ -1,8 +1,9 @@
 import Profile from "../models/Profile.js";
+import pdf from "pdf-parse";
 
 export const getProfile = async (req, res) => {
   try {
-    const profile = await Profile.findOne({ userId: req.user._id });
+    const profile = await Profile.findOne({ userId: req.user._id }).select("+resumeText");
     if (!profile) {
       return res.status(404).json({
         success: false,
@@ -21,7 +22,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, phone, githubUrl, linkedinUrl, portfolioUrl } = req.body;
+    const { firstName, lastName, phone, githubUrl, linkedinUrl, portfolioUrl, resumeText } = req.body;
 
     const updateFields = {
       firstName,
@@ -30,6 +31,7 @@ export const updateProfile = async (req, res) => {
       githubUrl,
       linkedinUrl,
       portfolioUrl,
+      resumeText,
     };
 
     // Remove undefined fields
@@ -43,7 +45,7 @@ export const updateProfile = async (req, res) => {
       { userId: req.user._id },
       { $set: updateFields },
       { new: true, upsert: true, runValidators: true }
-    );
+    ).select("+resumeText");
 
     return res.status(200).json({
       success: true,
@@ -185,5 +187,54 @@ export const deleteExperience = async (req, res) => {
   } catch (err) {
     console.error("[deleteExperience]", err);
     return res.status(500).json({ success: false, message: "Failed to delete experience." });
+  }
+};
+
+export const uploadResume = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded. Please upload a PDF resume.",
+      });
+    }
+
+    // Parse the PDF buffer
+    let parsedPdf;
+    try {
+      parsedPdf = await pdf(req.file.buffer);
+    } catch (parseErr) {
+      console.error("[uploadResume] PDF parsing error:", parseErr);
+      return res.status(422).json({
+        success: false,
+        message: "Failed to parse the uploaded PDF file. Please ensure it is a valid PDF.",
+      });
+    }
+
+    const text = parsedPdf.text;
+    if (!text || !text.trim()) {
+      return res.status(422).json({
+        success: false,
+        message: "Could not extract any text from the PDF. Please check if the file has selectable text.",
+      });
+    }
+
+    const profile = await Profile.findOneAndUpdate(
+      { userId: req.user._id },
+      { $set: { resumeText: text.trim() } },
+      { new: true, upsert: true }
+    ).select("+resumeText");
+
+    return res.status(200).json({
+      success: true,
+      message: "Resume uploaded and parsed successfully.",
+      data: { profile },
+    });
+  } catch (err) {
+    console.error("[uploadResume]", err);
+    return res.status(500).json({
+      success: false,
+      message: "An unexpected error occurred while parsing the resume.",
+    });
   }
 };
