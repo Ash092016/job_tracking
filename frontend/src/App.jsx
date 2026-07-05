@@ -5,11 +5,10 @@ import { useAuth }         from "./context/AuthContext.jsx";
 import DashboardLayout     from "./layouts/DashboardLayout.jsx";
 import Login               from "./views/Login.jsx";
 import Signup              from "./views/Signup.jsx";
-
+import ProfileWizard       from "./views/ProfileWizard.jsx";
+import JobBoard            from "./views/JobBoard.jsx";
 
 const Dashboard  = () => <PlaceholderPage title="Dashboard"    />;
-const Profile    = () => <PlaceholderPage title="Profile"      />;
-const Jobs       = () => <PlaceholderPage title="Applications" />;
 const JobDetail  = () => <PlaceholderPage title="Job Detail"   />;
 
 function PlaceholderPage({ title }) {
@@ -67,8 +66,8 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile"   element={<Profile />}   />
-        <Route path="/jobs"      element={<Jobs />}       />
+        <Route path="/profile"   element={<ProfileWizard />}   />
+        <Route path="/jobs"      element={<JobBoard />}       />
         <Route path="/jobs/:id"  element={<JobDetail />}  />
       </Route>
 
