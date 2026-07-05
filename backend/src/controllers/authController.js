@@ -15,7 +15,7 @@ const attachAuthCookie = (res, userId) => {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure:   process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge:   COOKIE_MAX_AGE,
   });
 
@@ -143,7 +143,7 @@ export const logout = (_req, res) => {
   res.cookie(COOKIE_NAME, "", {
     httpOnly: true,
     secure:   process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     expires:  new Date(0), 
   });
 
