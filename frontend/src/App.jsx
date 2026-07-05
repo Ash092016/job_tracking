@@ -7,9 +7,9 @@ import Login               from "./views/Login.jsx";
 import Signup              from "./views/Signup.jsx";
 import ProfileWizard       from "./views/ProfileWizard.jsx";
 import JobBoard            from "./views/JobBoard.jsx";
+import AiInsightsPanel     from "./components/AiInsightsPanel.jsx";
 
 const Dashboard  = () => <PlaceholderPage title="Dashboard"    />;
-const JobDetail  = () => <PlaceholderPage title="Job Detail"   />;
 
 function PlaceholderPage({ title }) {
   return (
@@ -68,7 +68,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile"   element={<ProfileWizard />}   />
         <Route path="/jobs"      element={<JobBoard />}       />
-        <Route path="/jobs/:id"  element={<JobDetail />}  />
+        <Route path="/jobs/:id"  element={<AiInsightsPanel />}  />
       </Route>
 
       {/* ── Fallbacks ──────────────────────────────────────── */}

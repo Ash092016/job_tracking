@@ -22,52 +22,54 @@ function SectionHead() {
   );
 }
 
-export default function SkeletonLoader() {
+export default function SkeletonLoader({ rightOnly = false }) {
   return (
     <div className="flex flex-col lg:flex-row gap-6 animate-fade-in">
 
       {/* ── LEFT COLUMN ────────────────────────────────────── */}
-      <div className="lg:w-2/5 space-y-5">
+      {!rightOnly && (
+        <div className="lg:w-2/5 space-y-5">
 
-        {/* Company + role block */}
-        <div className="card p-5 space-y-4">
-          <Bone className="h-3 w-20" />                    {/* "Company" label */}
-          <Bone className="h-6 w-48" />                    {/* Company name */}
-          <Bone className="h-3 w-16 mt-2" />               {/* "Role" label */}
-          <Bone className="h-5 w-64" />                    {/* Job title */}
+          {/* Company + role block */}
+          <div className="card p-5 space-y-4">
+            <Bone className="h-3 w-20" />                    {/* "Company" label */}
+            <Bone className="h-6 w-48" />                    {/* Company name */}
+            <Bone className="h-3 w-16 mt-2" />               {/* "Role" label */}
+            <Bone className="h-5 w-64" />                    {/* Job title */}
 
-          {/* Status badge */}
-          <div className="flex items-center gap-2 mt-2">
-            <Bone className="h-6 w-24 rounded-full" />
-          </div>
-        </div>
-
-        {/* Applied date + salary block */}
-        <div className="card p-5 space-y-3">
-          <SectionHead />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Bone className="h-3 w-20" />
-              <Bone className="h-5 w-28" />
-            </div>
-            <div className="space-y-2">
-              <Bone className="h-3 w-20" />
-              <Bone className="h-5 w-24" />
+            {/* Status badge */}
+            <div className="flex items-center gap-2 mt-2">
+              <Bone className="h-6 w-24 rounded-full" />
             </div>
           </div>
-        </div>
 
-        {/* Notes block */}
-        <div className="card p-5 space-y-3">
-          <SectionHead />
-          <Bone className="h-3 w-full" />
-          <Bone className="h-3 w-5/6" />
-          <Bone className="h-3 w-4/5" />
-        </div>
+          {/* Applied date + salary block */}
+          <div className="card p-5 space-y-3">
+            <SectionHead />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Bone className="h-3 w-20" />
+                <Bone className="h-5 w-28" />
+              </div>
+              <div className="space-y-2">
+                <Bone className="h-3 w-20" />
+                <Bone className="h-5 w-24" />
+              </div>
+            </div>
+          </div>
 
-        {/* Analyse button skeleton */}
-        <Bone className="h-11 w-full rounded-xl" />
-      </div>
+          {/* Notes block */}
+          <div className="card p-5 space-y-3">
+            <SectionHead />
+            <Bone className="h-3 w-full" />
+            <Bone className="h-3 w-5/6" />
+            <Bone className="h-3 w-4/5" />
+          </div>
+
+          {/* Analyse button skeleton */}
+          <Bone className="h-11 w-full rounded-xl" />
+        </div>
+      )}
 
       {/* ── RIGHT COLUMN ───────────────────────────────────── */}
       <div className="lg:flex-1 space-y-5">
