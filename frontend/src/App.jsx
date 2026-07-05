@@ -1,122 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Loader2 }                  from "lucide-react";
 
-function App() {
-  const [count, setCount] = useState(0)
+import { useAuth }         from "./context/AuthContext.jsx";
+import DashboardLayout     from "./layouts/DashboardLayout.jsx";
+import Login               from "./views/Login.jsx";
+import Signup              from "./views/Signup.jsx";
 
+
+const Dashboard  = () => <PlaceholderPage title="Dashboard"    />;
+const Profile    = () => <PlaceholderPage title="Profile"      />;
+const Jobs       = () => <PlaceholderPage title="Applications" />;
+const JobDetail  = () => <PlaceholderPage title="Job Detail"   />;
+
+function PlaceholderPage({ title }) {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
+      <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+        <Loader2 size={18} className="text-brand-400" />
+      </div>
+      <p className="text-sm">{title} — coming in Step 5</p>
+    </div>
+  );
 }
 
-export default App
+function ProtectedRoute({ children }) {
+  const { isAuthed, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <Loader2 size={32} className="text-brand-500 animate-spin" />
+      </div>
+    );
+  }
+
+  return isAuthed ? children : <Navigate to="/login" replace />;
+}
+
+function PublicRoute({ children }) {
+  const { isAuthed, isLoading } = useAuth();
+
+  if (isLoading) return null; 
+
+  return isAuthed ? <Navigate to="/dashboard" replace /> : children;
+}
+
+export default function App() {
+  return (
+    <Routes>
+      {/* ── Public routes ────────────────────────────────── */}
+      <Route
+        path="/login"
+        element={<PublicRoute><Login /></PublicRoute>}
+      />
+      <Route
+        path="/signup"
+        element={<PublicRoute><Signup /></PublicRoute>}
+      />
+
+      {/* ── Protected routes (all inside DashboardLayout) ── */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile"   element={<Profile />}   />
+        <Route path="/jobs"      element={<Jobs />}       />
+        <Route path="/jobs/:id"  element={<JobDetail />}  />
+      </Route>
+
+      {/* ── Fallbacks ──────────────────────────────────────── */}
+      <Route path="/"  element={<Navigate to="/dashboard" replace />} />
+      <Route path="*"  element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
