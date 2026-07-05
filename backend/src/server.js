@@ -8,6 +8,7 @@ import morgan       from "morgan";
 import { connectDB }  from "./config/db.js";
 import authRoutes     from "./routes/authRoutes.js";
 import jobRoutes      from "./routes/jobRoutes.js";
+import profileRoutes  from "./routes/profileRoutes.js";
 
 const app  = express();
 const PORT = process.env.PORT ?? 4000;
@@ -38,6 +39,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);  
+app.use("/api/profile", profileRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
